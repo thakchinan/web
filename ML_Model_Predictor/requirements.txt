@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-joblib
-scikit-learn
-jinja2
-numpy
-pandas
-openpyxl
-python-multipart
