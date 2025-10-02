@@ -315,3 +315,4 @@ if __name__ == "__main__":
         print("✅ โมเดล Day Type โหลดสำเร็จ")
     else:
         print("❌ ไม่พบโมเดล Day Type")
+
