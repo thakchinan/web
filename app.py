@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 import sys
 import os
 
-# Add numpy to path if needed
+# Force numpy to work with older versions
 try:
     import numpy._core
 except ImportError:
@@ -23,10 +23,16 @@ except ImportError:
         import numpy.core as _core
         sys.modules['numpy._core'] = _core
     except ImportError:
-        # If all else fails, create a dummy _core module
-        class DummyCore:
-            pass
-        sys.modules['numpy._core'] = DummyCore()
+        try:
+            # Try to import numpy._core from numpy
+            from numpy import _core
+            sys.modules['numpy._core'] = _core
+        except ImportError:
+            # If all else fails, create a dummy _core module
+            class DummyCore:
+                def __getattr__(self, name):
+                    return lambda *args, **kwargs: None
+            sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
@@ -64,6 +70,10 @@ day_type_labels = {
 # Traffic Jam Model
 jam_model = None
 try:
+    # Force numpy to work before loading model
+    import numpy as np
+    print(f"NumPy version: {np.__version__}")
+    
     jam_model = joblib.load("models/rf_model.pkl")
     print("✅ โหลดโมเดล Traffic Jam (Random Forest) สำเร็จ")
 except Exception as e:
