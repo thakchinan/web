@@ -1,5 +1,17 @@
 import os
+import sys
 import json
+
+# Fix numpy._core issue BEFORE importing numpy
+try:
+    import numpy._core
+except ImportError:
+    try:
+        import numpy.core as _core
+        sys.modules['numpy._core'] = _core
+    except ImportError:
+        pass
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -8,6 +20,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+# Set UTF-8 encoding for Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 print(f"NumPy version: {np.__version__}")
 
@@ -41,15 +57,17 @@ day_model = None
 
 try:
     jam_model = joblib.load("models/rf_model.pkl")
-    print("✅ โหลดโมเดล Traffic Jam สำเร็จ")
+    print("[OK] Traffic Jam model loaded successfully")
 except Exception as e:
-    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {e}")
+    print(f"[ERROR] Cannot load Traffic Jam model: {e}")
+    jam_model = None
 
 try:
     day_model = joblib.load("models/rf_model.pkl")
-    print("✅ โหลดโมเดล Day Type สำเร็จ")
+    print("[OK] Day Type model loaded successfully")
 except Exception as e:
-    print(f"❌ ไม่สามารถโหลดโมเดล Day Type: {e}")
+    print(f"[ERROR] Cannot load Day Type model: {e}")
+    day_model = None
 
 # ===== Feature Engineering =====
 def create_jam_features(data):
