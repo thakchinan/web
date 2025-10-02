@@ -38,11 +38,16 @@ except ImportError:
                     from numpy.core._core import _core
                     sys.modules['numpy._core'] = _core
                 except ImportError:
-                    # If all else fails, create a dummy _core module
-                    class DummyCore:
-                        def __getattr__(self, name):
-                            return lambda *args, **kwargs: None
-                    sys.modules['numpy._core'] = DummyCore()
+                    try:
+                        # Try to import numpy._core from numpy.core._core._core
+                        from numpy.core._core._core import _core
+                        sys.modules['numpy._core'] = _core
+                    except ImportError:
+                        # If all else fails, create a dummy _core module
+                        class DummyCore:
+                            def __getattr__(self, name):
+                                return lambda *args, **kwargs: None
+                        sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
@@ -106,6 +111,14 @@ try:
                 print("✅ โหลดโมเดล Traffic Jam (Dill) สำเร็จ")
             except Exception as dill_error:
                 print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Dill): {dill_error}")
+                # Try to load with different method
+                try:
+                    import cloudpickle
+                    with open("models/rf_model.pkl", "rb") as f:
+                        jam_model = cloudpickle.load(f)
+                    print("✅ โหลดโมเดล Traffic Jam (CloudPickle) สำเร็จ")
+                except Exception as cloudpickle_error:
+                    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (CloudPickle): {cloudpickle_error}")
 except Exception as e:
     print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {e}")
 
