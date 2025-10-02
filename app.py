@@ -10,6 +10,13 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+# Fix numpy._core issue
+try:
+    import numpy._core
+except ImportError:
+    # If numpy._core is not available, try to use numpy.core instead
+    import numpy.core as numpy._core
+
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
 app.add_middleware(
