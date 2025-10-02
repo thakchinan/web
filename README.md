@@ -30,11 +30,11 @@
 
 ### 1. เริ่มเซิร์ฟเวอร์
 ```bash
-python -m uvicorn simple_rf:app --host 127.0.0.1 --port 8003 --reload
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
 ### 2. เปิดเว็บเบราว์เซอร์
-ไปที่: `http://127.0.0.1:8003`
+ไปที่: `http://localhost:8000`
 
 ## 🔧 การใช้งาน
 
@@ -87,7 +87,7 @@ python -m uvicorn simple_rf:app --host 127.0.0.1 --port 8003 --reload
 
 ```
 ML_Model_Predictor/
-├── simple_rf.py              # ไฟล์หลัก FastAPI
+├── app.py                     # ไฟล์หลัก FastAPI
 ├── templates/
 │   └── simple_rf.html        # หน้าเว็บ
 ├── static/
