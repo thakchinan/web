@@ -1,13 +1,9 @@
 services:
   - type: web
     name: traffic-predictor
-    env: python
+    env: docker
     plan: free
-    buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.12
       - key: PORT
-        value: 10000
-    pythonVersion: 3.10.12
+        value: 8000

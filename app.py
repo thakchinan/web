@@ -11,11 +11,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Fix numpy._core issue
+import sys
+import os
+
+# Add numpy to path if needed
 try:
     import numpy._core
 except ImportError:
-    # If numpy._core is not available, try to use numpy.core instead
-    import numpy.core as numpy._core
+    try:
+        # Try to import numpy.core as _core
+        import numpy.core as _core
+        sys.modules['numpy._core'] = _core
+    except ImportError:
+        # If all else fails, create a dummy _core module
+        class DummyCore:
+            pass
+        sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")

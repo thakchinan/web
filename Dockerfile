@@ -6,7 +6,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install numpy first
+RUN pip install --upgrade pip
+RUN pip install "numpy>=1.26.0,<2.0.0"
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
