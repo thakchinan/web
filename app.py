@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Fix numpy._core issue
+# Fix numpy._core issue for Python 3
 import sys
 import os
 
@@ -53,11 +53,16 @@ except ImportError:
                                 from numpy.core._core._core._core._core import _core
                                 sys.modules['numpy._core'] = _core
                             except ImportError:
-                                # If all else fails, create a dummy _core module
-                                class DummyCore:
-                                    def __getattr__(self, name):
-                                        return lambda *args, **kwargs: None
-                                sys.modules['numpy._core'] = DummyCore()
+                                try:
+                                    # Try to import numpy._core from numpy.core._core._core._core._core._core
+                                    from numpy.core._core._core._core._core._core import _core
+                                    sys.modules['numpy._core'] = _core
+                                except ImportError:
+                                    # If all else fails, create a dummy _core module
+                                    class DummyCore:
+                                        def __getattr__(self, name):
+                                            return lambda *args, **kwargs: None
+                                    sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
@@ -145,6 +150,14 @@ try:
                             print("✅ โหลดโมเดล Traffic Jam (JSON) สำเร็จ")
                         except Exception as json_error:
                             print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (JSON): {json_error}")
+                            # Try to load with different method
+                            try:
+                                import yaml
+                                with open("models/rf_model.pkl", "r") as f:
+                                    jam_model = yaml.load(f, Loader=yaml.FullLoader)
+                                print("✅ โหลดโมเดล Traffic Jam (YAML) สำเร็จ")
+                            except Exception as yaml_error:
+                                print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (YAML): {yaml_error}")
 except Exception as e:
     print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {e}")
 
