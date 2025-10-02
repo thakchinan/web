@@ -74,6 +74,17 @@ except ImportError:
                                                     return lambda *args, **kwargs: None
                                             sys.modules['numpy._core'] = DummyCore()
 
+# Force numpy to work before importing anything else
+import numpy as np
+print(f"NumPy version: {np.__version__}")
+
+# Force scikit-learn to work
+try:
+    import sklearn
+    print(f"Scikit-learn version: {sklearn.__version__}")
+except ImportError as e:
+    print(f"Scikit-learn import error: {e}")
+
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
 app.add_middleware(
@@ -110,10 +121,6 @@ day_type_labels = {
 # Traffic Jam Model
 jam_model = None
 try:
-    # Force numpy to work before loading model
-    import numpy as np
-    print(f"NumPy version: {np.__version__}")
-    
     # Try to load model with error handling
     try:
         jam_model = joblib.load("models/rf_model.pkl")
