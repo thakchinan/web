@@ -72,25 +72,27 @@ except Exception as e:
 # ===== Feature Engineering =====
 def create_jam_features(data):
     """สร้างฟีเจอร์สำหรับการทำนายการจราจรติด/ไม่ติด"""
-    features = []
+    # Required features: latitude, longitude, density, volume, capacity, hour, speed, v/c
+    latitude = float(data.get("latitude", 13.7563))
+    longitude = float(data.get("longitude", 100.5018))
+    density = float(data.get("density", 50))
+    volume = float(data.get("volume", 1500))
+    capacity = float(data.get("capacity", 2000))
+    hour = int(data.get("hour", 12))
+    speed = float(data.get("speed", 45))
+    vc_ratio = float(data.get("vc_ratio", 0.75))
     
-    # Time-based features
-    features.append(data.get('hour', 12))
-    features.append(data.get('day_of_week', 1))
-    
-    # Weather features
-    features.append(data.get('temperature', 25))
-    features.append(data.get('humidity', 60))
-    features.append(data.get('rainfall', 0))
-    
-    # Traffic volume features
-    features.append(data.get('vehicle_count', 100))
-    features.append(data.get('speed', 50))
+    # Create feature array matching the model's expected format
+    features = [
+        latitude, longitude, density, volume, capacity, 
+        hour, speed, vc_ratio
+    ]
     
     return np.array(features).reshape(1, -1)
 
 def create_day_features(data):
     """สร้างฟีเจอร์สำหรับการทำนายประเภทวัน"""
+    # Use the same features as jam model
     return create_jam_features(data)
 
 # ===== API Endpoints =====
