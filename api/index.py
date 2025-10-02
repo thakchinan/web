@@ -1,90 +1,40 @@
 import os
-import sys
 import json
 import joblib
 import numpy as np
 import pandas as pd
-from io import BytesIO
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse
 
 # Fix numpy._core issue for Python 3
 import sys
-import os
 
 # Force numpy to work with older versions
 try:
     import numpy._core
 except ImportError:
     try:
-        # Try to import numpy.core as _core
         import numpy.core as _core
         sys.modules['numpy._core'] = _core
     except ImportError:
         try:
-            # Try to import numpy._core from numpy
             from numpy import _core
             sys.modules['numpy._core'] = _core
         except ImportError:
             try:
-                # Try to import numpy._core from numpy.core
                 from numpy.core import _core
                 sys.modules['numpy._core'] = _core
             except ImportError:
                 try:
-                    # Try to import numpy._core from numpy.core._core
                     from numpy.core._core import _core
                     sys.modules['numpy._core'] = _core
                 except ImportError:
-                    try:
-                        # Try to import numpy._core from numpy.core._core._core
-                        from numpy.core._core._core import _core
-                        sys.modules['numpy._core'] = _core
-                    except ImportError:
-                        try:
-                            # Try to import numpy._core from numpy.core._core._core._core
-                            from numpy.core._core._core._core import _core
-                            sys.modules['numpy._core'] = _core
-                        except ImportError:
-                            try:
-                                # Try to import numpy._core from numpy.core._core._core._core._core
-                                from numpy.core._core._core._core._core import _core
-                                sys.modules['numpy._core'] = _core
-                            except ImportError:
-                                try:
-                                    # Try to import numpy._core from numpy.core._core._core._core._core._core
-                                    from numpy.core._core._core._core._core._core import _core
-                                    sys.modules['numpy._core'] = _core
-                                except ImportError:
-                                    try:
-                                        # Try to import numpy._core from numpy.core._core._core._core._core._core._core
-                                        from numpy.core._core._core._core._core._core._core import _core
-                                        sys.modules['numpy._core'] = _core
-                                    except ImportError:
-                                        try:
-                                            # Try to import numpy._core from numpy.core._core._core._core._core._core._core._core
-                                            from numpy.core._core._core._core._core._core._core._core import _core
-                                            sys.modules['numpy._core'] = _core
-                                        except ImportError:
-                                            # If all else fails, create a dummy _core module
-                                            class DummyCore:
-                                                def __getattr__(self, name):
-                                                    return lambda *args, **kwargs: None
-                                            sys.modules['numpy._core'] = DummyCore()
-
-# Force numpy to work before importing anything else
-import numpy as np
-print(f"NumPy version: {np.__version__}")
-
-# Force scikit-learn to work
-try:
-    import sklearn
-    print(f"Scikit-learn version: {sklearn.__version__}")
-except ImportError as e:
-    print(f"Scikit-learn import error: {e}")
+                    # If all else fails, create a dummy _core module
+                    class DummyCore:
+                        def __getattr__(self, name):
+                            return lambda *args, **kwargs: None
+                    sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
@@ -94,19 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/health")
-def health():
-    return {
-        "status": "ok", 
-        "jam_model": "loaded" if jam_model is not None else "not_loaded",
-        "day_model": "loaded" if day_model is not None else "not_loaded"
-    }
-
-# ===== Static & Templates =====
-# Note: Vercel doesn't support static files the same way, so we'll handle this differently
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-# templates = Jinja2Templates(directory="templates")
 
 # ===== Traffic Labels =====
 traffic_labels = {
@@ -124,67 +61,8 @@ day_type_labels = {
 jam_model = None
 try:
     # Try to load model with error handling
-    try:
-        jam_model = joblib.load("models/rf_model.pkl")
-        print("✅ โหลดโมเดล Traffic Jam (Random Forest) สำเร็จ")
-    except Exception as model_error:
-        print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {model_error}")
-        # Try to load with different method
-        try:
-            import pickle
-            with open("models/rf_model.pkl", "rb") as f:
-                jam_model = pickle.load(f)
-            print("✅ โหลดโมเดล Traffic Jam (Pickle) สำเร็จ")
-        except Exception as pickle_error:
-            print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Pickle): {pickle_error}")
-            # Try to load with different method
-            try:
-                import dill
-                with open("models/rf_model.pkl", "rb") as f:
-                    jam_model = dill.load(f)
-                print("✅ โหลดโมเดล Traffic Jam (Dill) สำเร็จ")
-            except Exception as dill_error:
-                print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Dill): {dill_error}")
-                # Try to load with different method
-                try:
-                    import cloudpickle
-                    with open("models/rf_model.pkl", "rb") as f:
-                        jam_model = cloudpickle.load(f)
-                    print("✅ โหลดโมเดล Traffic Jam (CloudPickle) สำเร็จ")
-                except Exception as cloudpickle_error:
-                    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (CloudPickle): {cloudpickle_error}")
-                    # Try to load with different method
-                    try:
-                        import marshal
-                        with open("models/rf_model.pkl", "rb") as f:
-                            jam_model = marshal.load(f)
-                        print("✅ โหลดโมเดล Traffic Jam (Marshal) สำเร็จ")
-                    except Exception as marshal_error:
-                        print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Marshal): {marshal_error}")
-                        # Try to load with different method
-                        try:
-                            import json
-                            with open("models/rf_model.pkl", "r") as f:
-                                jam_model = json.load(f)
-                            print("✅ โหลดโมเดล Traffic Jam (JSON) สำเร็จ")
-                        except Exception as json_error:
-                            print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (JSON): {json_error}")
-                            # Try to load with different method
-                            try:
-                                import yaml
-                                with open("models/rf_model.pkl", "r") as f:
-                                    jam_model = yaml.load(f, Loader=yaml.FullLoader)
-                                print("✅ โหลดโมเดล Traffic Jam (YAML) สำเร็จ")
-                            except Exception as yaml_error:
-                                print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (YAML): {yaml_error}")
-                                # Try to load with different method
-                                try:
-                                    import toml
-                                    with open("models/rf_model.pkl", "r") as f:
-                                        jam_model = toml.load(f)
-                                    print("✅ โหลดโมเดล Traffic Jam (TOML) สำเร็จ")
-                                except Exception as toml_error:
-                                    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (TOML): {toml_error}")
+    jam_model = joblib.load("models/rf_model.pkl")
+    print("✅ โหลดโมเดล Traffic Jam (Random Forest) สำเร็จ")
 except Exception as e:
     print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {e}")
 
@@ -199,7 +77,6 @@ except Exception as e:
 # ===== Feature Engineering =====
 def create_jam_features(data):
     """สร้างฟีเจอร์สำหรับการทำนายการจราจรติด/ไม่ติด"""
-    # Basic features for traffic jam prediction
     features = []
     
     # Time-based features
@@ -244,7 +121,6 @@ def create_jam_features(data):
 
 def create_day_features(data):
     """สร้างฟีเจอร์สำหรับการทำนายประเภทวัน"""
-    # Similar to jam features but focused on day type prediction
     features = []
     
     # Time-based features
@@ -294,12 +170,22 @@ async def root():
     return {
         "message": "Traffic Congestion Predictor API",
         "version": "1.0.0",
+        "status": "running",
         "endpoints": {
             "health": "/health",
             "predict_jam": "/predict/jam",
             "predict_day": "/predict/day",
+            "predict_both": "/predict/both",
             "docs": "/docs"
         }
+    }
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok", 
+        "jam_model": "loaded" if jam_model is not None else "not_loaded",
+        "day_model": "loaded" if day_model is not None else "not_loaded"
     }
 
 @app.post("/predict/jam")
