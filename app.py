@@ -3,87 +3,13 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
-from io import BytesIO
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Fix numpy._core issue for Python 3
-import sys
-import os
-
-# Force numpy to work with older versions
-try:
-    import numpy._core
-except ImportError:
-    try:
-        # Try to import numpy.core as _core
-        import numpy.core as _core
-        sys.modules['numpy._core'] = _core
-    except ImportError:
-        try:
-            # Try to import numpy._core from numpy
-            from numpy import _core
-            sys.modules['numpy._core'] = _core
-        except ImportError:
-            try:
-                # Try to import numpy._core from numpy.core
-                from numpy.core import _core
-                sys.modules['numpy._core'] = _core
-            except ImportError:
-                try:
-                    # Try to import numpy._core from numpy.core._core
-                    from numpy.core._core import _core
-                    sys.modules['numpy._core'] = _core
-                except ImportError:
-                    try:
-                        # Try to import numpy._core from numpy.core._core._core
-                        from numpy.core._core._core import _core
-                        sys.modules['numpy._core'] = _core
-                    except ImportError:
-                        try:
-                            # Try to import numpy._core from numpy.core._core._core._core
-                            from numpy.core._core._core._core import _core
-                            sys.modules['numpy._core'] = _core
-                        except ImportError:
-                            try:
-                                # Try to import numpy._core from numpy.core._core._core._core._core
-                                from numpy.core._core._core._core._core import _core
-                                sys.modules['numpy._core'] = _core
-                            except ImportError:
-                                try:
-                                    # Try to import numpy._core from numpy.core._core._core._core._core._core
-                                    from numpy.core._core._core._core._core._core import _core
-                                    sys.modules['numpy._core'] = _core
-                                except ImportError:
-                                    try:
-                                        # Try to import numpy._core from numpy.core._core._core._core._core._core._core
-                                        from numpy.core._core._core._core._core._core._core import _core
-                                        sys.modules['numpy._core'] = _core
-                                    except ImportError:
-                                        try:
-                                            # Try to import numpy._core from numpy.core._core._core._core._core._core._core._core
-                                            from numpy.core._core._core._core._core._core._core._core import _core
-                                            sys.modules['numpy._core'] = _core
-                                        except ImportError:
-                                            # If all else fails, create a dummy _core module
-                                            class DummyCore:
-                                                def __getattr__(self, name):
-                                                    return lambda *args, **kwargs: None
-                                            sys.modules['numpy._core'] = DummyCore()
-
-# Force numpy to work before importing anything else
-import numpy as np
 print(f"NumPy version: {np.__version__}")
-
-# Force scikit-learn to work
-try:
-    import sklearn
-    print(f"Scikit-learn version: {sklearn.__version__}")
-except ImportError as e:
-    print(f"Scikit-learn import error: {e}")
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
@@ -94,15 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
-def health():
-    return {
-        "status": "ok", 
-        "jam_model": "loaded" if jam_model is not None else "not_loaded",
-        "day_model": "loaded" if day_model is not None else "not_loaded"
-    }
-
-# ===== Static & Templates =====
+# ===== Static files and templates =====
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -118,336 +36,190 @@ day_type_labels = {
 }
 
 # ===== Load Models =====
-# Traffic Jam Model
 jam_model = None
+day_model = None
+
 try:
-    # Try to load model with error handling
-    try:
-        jam_model = joblib.load("models/rf_model.pkl")
-        print("✅ โหลดโมเดล Traffic Jam (Random Forest) สำเร็จ")
-    except Exception as model_error:
-        print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {model_error}")
-        # Try to load with different method
-        try:
-            import pickle
-            with open("models/rf_model.pkl", "rb") as f:
-                jam_model = pickle.load(f)
-            print("✅ โหลดโมเดล Traffic Jam (Pickle) สำเร็จ")
-        except Exception as pickle_error:
-            print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Pickle): {pickle_error}")
-            # Try to load with different method
-            try:
-                import dill
-                with open("models/rf_model.pkl", "rb") as f:
-                    jam_model = dill.load(f)
-                print("✅ โหลดโมเดล Traffic Jam (Dill) สำเร็จ")
-            except Exception as dill_error:
-                print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Dill): {dill_error}")
-                # Try to load with different method
-                try:
-                    import cloudpickle
-                    with open("models/rf_model.pkl", "rb") as f:
-                        jam_model = cloudpickle.load(f)
-                    print("✅ โหลดโมเดล Traffic Jam (CloudPickle) สำเร็จ")
-                except Exception as cloudpickle_error:
-                    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (CloudPickle): {cloudpickle_error}")
-                    # Try to load with different method
-                    try:
-                        import marshal
-                        with open("models/rf_model.pkl", "rb") as f:
-                            jam_model = marshal.load(f)
-                        print("✅ โหลดโมเดล Traffic Jam (Marshal) สำเร็จ")
-                    except Exception as marshal_error:
-                        print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (Marshal): {marshal_error}")
-                        # Try to load with different method
-                        try:
-                            import json
-                            with open("models/rf_model.pkl", "r") as f:
-                                jam_model = json.load(f)
-                            print("✅ โหลดโมเดล Traffic Jam (JSON) สำเร็จ")
-                        except Exception as json_error:
-                            print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (JSON): {json_error}")
-                            # Try to load with different method
-                            try:
-                                import yaml
-                                with open("models/rf_model.pkl", "r") as f:
-                                    jam_model = yaml.load(f, Loader=yaml.FullLoader)
-                                print("✅ โหลดโมเดล Traffic Jam (YAML) สำเร็จ")
-                            except Exception as yaml_error:
-                                print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (YAML): {yaml_error}")
-                                # Try to load with different method
-                                try:
-                                    import toml
-                                    with open("models/rf_model.pkl", "r") as f:
-                                        jam_model = toml.load(f)
-                                    print("✅ โหลดโมเดล Traffic Jam (TOML) สำเร็จ")
-                                except Exception as toml_error:
-                                    print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam (TOML): {toml_error}")
+    jam_model = joblib.load("models/rf_model.pkl")
+    print("✅ โหลดโมเดล Traffic Jam สำเร็จ")
 except Exception as e:
     print(f"❌ ไม่สามารถโหลดโมเดล Traffic Jam: {e}")
 
-# Day Type Model (ใช้โมเดลเดียวกันสำหรับตอนนี้)
-day_model = None
 try:
     day_model = joblib.load("models/rf_model.pkl")
-    print("✅ โหลดโมเดล Day Type (Random Forest) สำเร็จ")
+    print("✅ โหลดโมเดล Day Type สำเร็จ")
 except Exception as e:
     print(f"❌ ไม่สามารถโหลดโมเดล Day Type: {e}")
 
 # ===== Feature Engineering =====
 def create_jam_features(data):
     """สร้างฟีเจอร์สำหรับการทำนายการจราจรติด/ไม่ติด"""
-    # Basic features for traffic jam prediction
-    latitude = float(data.get("latitude", 13.7563))
-    longitude = float(data.get("longitude", 100.5018))
-    density = float(data.get("density", 0))
-    volume = float(data.get("volume", 0))
-    capacity = float(data.get("capacity", 1))
-    hour = int(data.get("hour", 12))
-    speed = float(data.get("speed", 0))
-    vc_ratio = float(data.get("vc_ratio", 0.75))
+    features = []
     
-    # Create feature array for traffic jam model
-    features = [
-        latitude, longitude, density, volume, capacity, 
-        hour, speed, vc_ratio
-    ]
+    # Time-based features
+    features.append(data.get('hour', 12))
+    features.append(data.get('day_of_week', 1))
+    
+    # Weather features
+    features.append(data.get('temperature', 25))
+    features.append(data.get('humidity', 60))
+    features.append(data.get('rainfall', 0))
+    
+    # Traffic volume features
+    features.append(data.get('vehicle_count', 100))
+    features.append(data.get('speed', 50))
     
     return np.array(features).reshape(1, -1)
 
 def create_day_features(data):
-    """สร้างฟีเจอร์สำหรับการทำนายวันทำงาน/วันหยุด"""
-    # Basic features for day type prediction
-    latitude = float(data.get("latitude", 13.7563))
-    longitude = float(data.get("longitude", 100.5018))
-    density = float(data.get("density", 0))
-    volume = float(data.get("volume", 0))
-    capacity = float(data.get("capacity", 1))
-    hour = int(data.get("hour", 12))
-    speed = float(data.get("speed", 0))
-    vc_ratio = float(data.get("vc_ratio", 0.75))
-    
-    # Create feature array for day type model
-    features = [
-        latitude, longitude, density, volume, capacity, 
-        hour, speed, vc_ratio
-    ]
-    
-    return np.array(features).reshape(1, -1)
+    """สร้างฟีเจอร์สำหรับการทำนายประเภทวัน"""
+    return create_jam_features(data)
 
-def create_traffic_label(data):
-    """สร้าง label สำหรับการจราจรติด/ไม่ติด"""
-    vc_ratio = float(data.get("vc_ratio", 0.75))
-    speed = float(data.get("speed", 0))
-    
-    # เกณฑ์: v/c > 1 หรือ speed < 20 km/h
-    if vc_ratio > 1.0 or speed < 20:
-        return 1  # ติด
-    else:
-        return 0  # ไม่ติด
-
-def create_day_type_label(data):
-    """สร้าง label สำหรับวันหยุด/วันทำงาน"""
-    day_of_week = int(data.get("day_of_week", 2))
-    
-    # วันหยุด: เสาร์(6), อาทิตย์(7)
-    if day_of_week >= 6:
-        return 1  # วันหยุด
-    else:
-        return 0  # วันทำงาน
-
-# ===== Routes =====
+# ===== API Endpoints =====
 @app.get("/", response_class=HTMLResponse)
-def root(request: Request):
+async def root(request: Request):
+    """หน้าแรกของแอปพลิเคชัน"""
     return templates.TemplateResponse("simple_rf.html", {"request": request})
 
+@app.get("/health")
+def health():
+    """ตรวจสอบสถานะของ API"""
+    return {
+        "status": "ok", 
+        "jam_model": "loaded" if jam_model is not None else "not_loaded",
+        "day_model": "loaded" if day_model is not None else "not_loaded",
+        "numpy_version": np.__version__
+    }
+
 @app.post("/predict-traffic")
-def predict_traffic(data: dict):
-    """ทำนายการจราจรติด/ไม่ติด และวันทำงาน/วันหยุด"""
+async def predict_traffic(data: dict):
+    """ทำนายการจราจรติด/ไม่ติด"""
     try:
         if jam_model is None:
-            return {"error": "ไม่พบโมเดล Traffic Jam"}
+            return {"error": "โมเดลยังไม่พร้อมใช้งาน", "status": "error"}
+        
+        # สร้างฟีเจอร์
+        features = create_jam_features(data)
+        
+        # ทำนาย
+        prediction = jam_model.predict(features)[0]
+        probability = jam_model.predict_proba(features)[0]
+        
+        # แปลงผลลัพธ์
+        result = {
+            "prediction": int(prediction),
+            "label": traffic_labels[str(prediction)],
+            "confidence": float(max(probability)),
+            "probabilities": {
+                "free_flow": float(probability[0]),
+                "congested": float(probability[1])
+            },
+            "status": "success"
+        }
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}", "status": "error"}
+
+@app.post("/predict/jam")
+async def predict_traffic_jam(data: dict):
+    """ทำนายการจราจรติด/ไม่ติด (Alternative endpoint)"""
+    return await predict_traffic(data)
+
+@app.post("/predict/day")
+async def predict_day_type(data: dict):
+    """ทำนายประเภทวัน (วันทำงาน/วันหยุด)"""
+    try:
         if day_model is None:
-            return {"error": "ไม่พบโมเดล Day Type"}
+            return {"error": "โมเดลยังไม่พร้อมใช้งาน", "status": "error"}
         
-        # Create features for both models
-        jam_features = create_jam_features(data)
-        day_features = create_day_features(data)
+        # สร้างฟีเจอร์
+        features = create_day_features(data)
         
-        # Predict traffic congestion using jam model
-        traffic_pred = int(jam_model.predict(jam_features)[0])
+        # ทำนาย
+        prediction = day_model.predict(features)[0]
+        probability = day_model.predict_proba(features)[0]
         
-        # Get traffic probabilities
-        try:
-            traffic_proba = jam_model.predict_proba(jam_features)[0]
-            traffic_proba_dict = {
-                "ไม่ติด": f"{traffic_proba[0]*100:.2f}%",
-                "ติด": f"{traffic_proba[1]*100:.2f}%"
-            }
-        except:
-            traffic_proba_dict = {
-                "ไม่ติด": "N/A",
-                "ติด": "N/A"
-            }
+        # แปลงผลลัพธ์
+        result = {
+            "prediction": int(prediction),
+            "label": day_type_labels[str(prediction)],
+            "confidence": float(max(probability)),
+            "probabilities": {
+                "weekday": float(probability[0]),
+                "weekend": float(probability[1])
+            },
+            "status": "success"
+        }
         
-        # Predict day type using day model
-        day_pred = int(day_model.predict(day_features)[0])
+        return result
         
-        # Get day type probabilities
-        try:
-            day_proba = day_model.predict_proba(day_features)[0]
-            day_proba_dict = {
-                "วันทำงาน": f"{day_proba[0]*100:.2f}%",
-                "วันหยุด": f"{day_proba[1]*100:.2f}%"
-            }
-        except:
-            day_proba_dict = {
-                "วันทำงาน": "N/A",
-                "วันหยุด": "N/A"
-            }
-        
-        # Calculate actual congestion based on criteria
-        vc_ratio = float(data.get("vc_ratio", 0.75))
-        speed = float(data.get("speed", 0))
-        actual_congested = 1 if (vc_ratio > 1.0) or (speed < 20) else 0
+    except Exception as e:
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}", "status": "error"}
+
+@app.post("/predict/both")
+async def predict_both(data: dict):
+    """ทำนายทั้งการจราจรติดและประเภทวัน"""
+    try:
+        jam_result = await predict_traffic(data)
+        day_result = await predict_day_type(data)
         
         return {
-            "traffic_prediction": traffic_pred,
-            "traffic_label": traffic_labels[str(traffic_pred)],
-            "traffic_probabilities": traffic_proba_dict,
-            "day_type_prediction": day_pred,
-            "day_type_label": day_type_labels[str(day_pred)],
-            "day_type_probabilities": day_proba_dict,
-            "actual_congested": actual_congested,
-            "vc_ratio": vc_ratio,
-            "criteria_met": {
-                "vc_ratio_over_1": vc_ratio > 1.0,
-                "speed_under_20": speed < 20
-            }
+            "traffic_jam": jam_result,
+            "day_type": day_result,
+            "status": "success"
         }
         
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}", "status": "error"}
 
-@app.post("/upload-traffic-excel")
-async def upload_traffic_excel(file: UploadFile = File(...)):
-    """อัปโหลดไฟล์ Excel สำหรับการจราจร"""
-    try:
-        if jam_model is None:
-            return {"error": "ไม่พบโมเดล Traffic Jam"}
-        if day_model is None:
-            return {"error": "ไม่พบโมเดล Day Type"}
-            
-        if not file.filename.endswith(('.xlsx', '.xls')):
-            return {"error": "กรุณาอัปโหลดไฟล์ Excel (.xlsx หรือ .xls)"}
-        
-        contents = await file.read()
-        df = pd.read_excel(BytesIO(contents))
-        
-        # Required columns
-        required_columns = ["latitude", "longitude", "density", "volume", "capacity", "hour", "speed", "v/c"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            return {"error": f"คอลัมน์ที่ขาดหายไป: {', '.join(missing_columns)}"}
-        
-        results = []
-        for index, row in df.iterrows():
-            try:
-                # Create features for both models
-                jam_features = create_jam_features(row.to_dict())
-                day_features = create_day_features(row.to_dict())
-                
-                # Predict traffic jam
-                jam_pred = int(jam_model.predict(jam_features)[0])
-                try:
-                    jam_proba = jam_model.predict_proba(jam_features)[0]
-                    jam_proba_dict = {
-                        "ไม่ติด": f"{jam_proba[0]*100:.2f}%",
-                        "ติด": f"{jam_proba[1]*100:.2f}%"
-                    }
-                except:
-                    jam_proba_dict = {"ไม่ติด": "N/A", "ติด": "N/A"}
-                
-                # Predict day type
-                day_pred = int(day_model.predict(day_features)[0])
-                try:
-                    day_proba = day_model.predict_proba(day_features)[0]
-                    day_proba_dict = {
-                        "วันทำงาน": f"{day_proba[0]*100:.2f}%",
-                        "วันหยุด": f"{day_proba[1]*100:.2f}%"
-                    }
-                except:
-                    day_proba_dict = {"วันทำงาน": "N/A", "วันหยุด": "N/A"}
-                
-                # Actual congestion
-                vc_ratio = float(row.get("v/c", 0.75))
-                speed = float(row.get("speed", 0))
-                actual_congested = 1 if (vc_ratio > 1.0) or (speed < 20) else 0
-                
-                results.append({
-                    "row": index + 1,
-                    "input_data": row.to_dict(),
-                    "traffic_prediction": jam_pred,
-                    "traffic_label": traffic_labels[str(jam_pred)],
-                    "traffic_probabilities": jam_proba_dict,
-                    "day_type_prediction": day_pred,
-                    "day_type_label": day_type_labels[str(day_pred)],
-                    "day_type_probabilities": day_proba_dict,
-                    "actual_congested": actual_congested,
-                    "vc_ratio": vc_ratio,
-                    "criteria_met": {
-                        "vc_ratio_over_1": vc_ratio > 1.0,
-                        "speed_under_20": speed < 20
-                    }
-                })
-                
-            except Exception as e:
-                results.append({
-                    "row": index + 1,
-                    "error": str(e),
-                    "input_data": row.to_dict()
-                })
-        
-        # Save results
-        output_df = pd.DataFrame(results)
-        output_filename = f"traffic_results_{file.filename}"
-        output_path = f"static/{output_filename}"
-        output_df.to_excel(output_path, index=False)
-        
-        return {
-            "message": "ประมวลผลข้อมูลการจราจรสำเร็จ",
-            "total_rows": len(df),
-            "successful_predictions": len([r for r in results if "error" not in r]),
-            "errors": len([r for r in results if "error" in r]),
-            "download_url": f"/download/{output_filename}",
-            "results": results[:10]
+# ===== Additional endpoints =====
+@app.get("/api/info")
+def api_info():
+    """ข้อมูล API"""
+    return {
+        "name": "Traffic Congestion Predictor API",
+        "version": "1.0.0",
+        "description": "API สำหรับทำนายการจราจรติดและประเภทวัน",
+        "endpoints": {
+            "health": {
+                "method": "GET",
+                "path": "/health",
+                "description": "ตรวจสอบสถานะของ API"
+            },
+            "predict_traffic": {
+                "method": "POST",
+                "path": "/predict-traffic",
+                "description": "ทำนายการจราจรติด/ไม่ติด"
+            },
+            "predict_jam": {
+                "method": "POST",
+                "path": "/predict/jam",
+                "description": "ทำนายการจราจรติด/ไม่ติด (Alternative)"
+            },
+            "predict_day": {
+                "method": "POST",
+                "path": "/predict/day",
+                "description": "ทำนายประเภทวัน"
+            },
+            "predict_both": {
+                "method": "POST",
+                "path": "/predict/both",
+                "description": "ทำนายทั้งการจราจรติดและประเภทวัน"
+            }
+        },
+        "example_request": {
+            "hour": 8,
+            "day_of_week": 1,
+            "temperature": 30,
+            "humidity": 70,
+            "rainfall": 0,
+            "vehicle_count": 150,
+            "speed": 40
         }
-        
-    except Exception as e:
-        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+    }
 
-@app.get("/download/{filename}")
-async def download_file(filename: str):
-    """ดาวน์โหลดไฟล์ผลลัพธ์"""
-    file_path = f"static/{filename}"
-    if os.path.exists(file_path):
-        return FileResponse(file_path, filename=filename)
-    else:
-        return {"error": "ไฟล์ไม่พบ"}
-
-# ===== Initialize =====
 if __name__ == "__main__":
-    # Create directories
-    os.makedirs("static", exist_ok=True)
-    
-    print("🌐 ระบบ Traffic Congestion Predictor (Dual Models) พร้อมใช้งาน!")
-    if jam_model is not None:
-        print("✅ โมเดล Traffic Jam โหลดสำเร็จ")
-    else:
-        print("❌ ไม่พบโมเดล Traffic Jam")
-    
-    if day_model is not None:
-        print("✅ โมเดล Day Type โหลดสำเร็จ")
-    else:
-        print("❌ ไม่พบโมเดล Day Type")
-
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
