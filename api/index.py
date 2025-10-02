@@ -377,7 +377,6 @@ async def predict_both(data: dict):
     except Exception as e:
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
 
-# ===== Main =====
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# ===== Vercel Handler =====
+# This is the entry point for Vercel
+handler = app
