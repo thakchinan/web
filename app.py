@@ -63,11 +63,16 @@ except ImportError:
                                         from numpy.core._core._core._core._core._core._core import _core
                                         sys.modules['numpy._core'] = _core
                                     except ImportError:
-                                        # If all else fails, create a dummy _core module
-                                        class DummyCore:
-                                            def __getattr__(self, name):
-                                                return lambda *args, **kwargs: None
-                                        sys.modules['numpy._core'] = DummyCore()
+                                        try:
+                                            # Try to import numpy._core from numpy.core._core._core._core._core._core._core._core
+                                            from numpy.core._core._core._core._core._core._core._core import _core
+                                            sys.modules['numpy._core'] = _core
+                                        except ImportError:
+                                            # If all else fails, create a dummy _core module
+                                            class DummyCore:
+                                                def __getattr__(self, name):
+                                                    return lambda *args, **kwargs: None
+                                            sys.modules['numpy._core'] = DummyCore()
 
 # ===== FastAPI setup =====
 app = FastAPI(title="Traffic Congestion Predictor", version="1.0.0")
